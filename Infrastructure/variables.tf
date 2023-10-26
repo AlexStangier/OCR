@@ -14,3 +14,9 @@ variable "google_zone" {
   default     = "europe-west1-b"
   description = "Default zone"
 }
+
+variable "environment" {
+  type        = string
+  default     = "prod"
+  description = "Default deployment environment"
+}
