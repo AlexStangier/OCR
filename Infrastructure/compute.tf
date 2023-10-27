@@ -6,6 +6,6 @@ resource "google_cloud_run_v2_service" "cloud_run_ocr" {
     containers {
       image = "us-docker.pkg.dev/cloudrun/container/hello"
     }
-    service_account = google_service_account.service_account_cloud_run.email
+    service_account = google_service_account.cr.email
   }
 }
