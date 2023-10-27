@@ -1,85 +1,60 @@
-// Copyright 2019 Google LLC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-// [START cloudrun_pubsub_server]
-// [START run_pubsub_server]
-
-// Sample run-pubsub is a Cloud Run service which handles Pub/Sub messages.
 package main
 
 import (
-	"encoding/json"
-	"io"
+	"context"
+	"fmt"
 	"log"
-	"net/http"
-	"os"
+
+	documentai "cloud.google.com/go/documentai/apiv1"
+	"cloud.google.com/go/storage"
+	"google.golang.org/api/iterator"
 )
 
 func main() {
-	http.HandleFunc("/", HelloPubSub)
-	// Determine port for HTTP service.
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-		log.Printf("Defaulting to port %s", port)
-	}
-	// Start HTTP server.
-	log.Printf("Listening on port %s", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatal(err)
-	}
-}
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
 
-// [END run_pubsub_server]
-// [END cloudrun_pubsub_server]
-
-// [START cloudrun_pubsub_handler]
-// [START run_pubsub_handler]
-
-// PubSubMessage is the payload of a Pub/Sub event.
-// See the documentation for more details:
-// https://cloud.google.com/pubsub/docs/reference/rest/v1/PubsubMessage
-type PubSubMessage struct {
-	Message struct {
-		Data []byte `json:"data,omitempty"`
-		ID   string `json:"id"`
-	} `json:"message"`
-	Subscription string `json:"subscription"`
-}
-
-// HelloPubSub receives and processes a Pub/Sub push message.
-func HelloPubSub(w http.ResponseWriter, r *http.Request) {
-	var m PubSubMessage
-	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("ioutil.ReadAll: %v", err)
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
-	}
-	// byte slice unmarshalling handles base64 decoding.
-	if err := json.Unmarshal(body, &m); err != nil {
-		log.Printf("json.Unmarshal: %v", err)
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
+		log.Fatal("Failed to Authenticate")
 	}
 
-	name := string(m.Message.Data)
-	if name == "" {
-		name = "World"
-	}
-	log.Printf("Hello %s!", name)
+	objects := getBucketContent(client, ctx, "ocrtest-image-bucket-cw-academy-sandbox-alex")
+	fmt.Println(objects[0].Name)
+
 }
 
-// [END run_pubsub_handler]
-// [END cloudrun_pubsub_handler]
+func getBucketContent(client *storage.Client, ctx context.Context, bucketName string) []*storage.ObjectAttrs {
+	bkt := client.Bucket(bucketName)
+
+	var bucketObjects []*storage.ObjectAttrs
+
+	//get all items in bucket
+	objects := bkt.Objects(ctx, nil)
+	for {
+		attrs, err := objects.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			log.Fatal("Failed to iterate all Bucket Objects.")
+		}
+
+		bucketObjects = append(bucketObjects, attrs)
+	}
+
+	return bucketObjects
+}
+
+func analyzeDocument(ctx context.Context) {
+	docai, err := documentai.NewDocumentProcessorClient(ctx)
+	if err != nil {
+		log.Fatal("Failed to instanciate Doc AI.")
+	}
+
+	//req := &documentaipb.ProcessRequest
+
+	docai.Close()
+}
+
+//TODO docker tag go-ocr europe-west1-docker.pkg.dev/cw-academy-sandbox-alex/ocr/go-ocr:0.1
+//TODO docker push europe-west1-docker.pkg.dev/cw-academy-sandbox-alex/ocr/go-ocr:0.1

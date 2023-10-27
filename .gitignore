@@ -3,4 +3,3 @@ Diagram
 .terraform.*
 tf-sa-key.json
 *.txt
-*.tfstate*
